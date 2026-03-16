@@ -7,7 +7,23 @@ from .analyzer import (
 from .config import STYLE_NAMES
 from .generator import generate_bets
 from .parser import parse_combination
+from .reminders import bootstrap_state_from_existing_history, collect_reminders
 from .storage import add_combination, load_history
+
+
+def _print_startup_reminders() -> None:
+    history = load_history()
+    bootstrap_state_from_existing_history(len(history))
+    reminders = collect_reminders(len(history))
+
+    if not reminders:
+        return
+
+    print("\n" + "!" * 56)
+    print("Напоминания")
+    print("!" * 56)
+    for index, reminder in enumerate(reminders, start=1):
+        print(f"{index}. {reminder}")
 
 
 def _print_stats() -> None:
@@ -104,6 +120,22 @@ def _add_many() -> None:
     print(f"Добавлено: {added_count}")
 
 
+def _ask_diversified_count() -> int | None:
+    text = input("Сколько диверсифицированных ставок сгенерировать? (2-20): ").strip()
+
+    try:
+        count = int(text)
+    except ValueError:
+        print("Нужно ввести целое число.")
+        return None
+
+    if count < 2 or count > 20:
+        print("Количество должно быть от 2 до 20.")
+        return None
+
+    return count
+
+
 def _generate(style: str, count: int) -> None:
     history = load_history()
     bets = generate_bets(history, count=count, style=style)
@@ -131,12 +163,14 @@ def _print_menu() -> None:
     print("4 - Сгенерировать 2 консервативные ставки")
     print("5 - Сгенерировать 2 сбалансированные ставки")
     print("6 - Сгенерировать 2 рискованные ставки")
-    print("7 - Сгенерировать 4 диверсифицированные ставки")
+    print("7 - Сгенерировать серию диверсифицированных ставок")
     print("8 - Показать всю историю")
     print("0 - Выход")
 
 
 def main() -> None:
+    _print_startup_reminders()
+
     while True:
         _print_menu()
         choice = input("\nВыбери пункт: ").strip()
@@ -155,7 +189,9 @@ def main() -> None:
             elif choice == "6":
                 _generate("risky", 2)
             elif choice == "7":
-                _generate("diversified", 4)
+                diversified_count = _ask_diversified_count()
+                if diversified_count is not None:
+                    _generate("diversified", diversified_count)
             elif choice == "8":
                 _print_history()
             elif choice == "0":

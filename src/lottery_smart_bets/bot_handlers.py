@@ -124,14 +124,15 @@ def _format_history_text(limit: int = 10) -> str:
     return "\n".join(lines)
 
 
-def _format_bets_text(style: str) -> str:
+def _format_bets_text(style: str, count: int = 2) -> str:
     history = load_history()
-    bets = generate_bets(history, count=2, style=style)
+    bets = generate_bets(history, count=count, style=style)
 
     style_titles = {
         "balanced": "Сбалансированные",
         "conservative": "Консервативные",
         "risky": "Рискованные",
+        "diversified": "Диверсифицированные",
     }
 
     lines = [f"{style_titles[style]} ставки:"]
@@ -158,6 +159,7 @@ async def start_handler(
         "/bets balanced - 2 сбалансированные ставки\n"
         "/bets conservative - 2 консервативные ставки\n"
         "/bets risky - 2 рискованные ставки\n"
+        "/bets diversified 6 - 6 диверсифицированных ставок\n"
         "/add 3 4 7 19 23 28 31 + 50 - добавить комбинацию\n\n"
         "Можно просто прислать строку комбинации без команды."
     )
@@ -206,19 +208,47 @@ async def bets_handler(
         return
 
     style = "balanced"
+    count = 2
+
     if context.args:
-        candidate = context.args[0].strip().lower()
-        if candidate in {"balanced", "conservative", "risky"}:
-            style = candidate
+        candidate_style = context.args[0].strip().lower()
+        if candidate_style in {"balanced", "conservative", "risky", "diversified"}:
+            style = candidate_style
         else:
             if update.message:
                 await update.message.reply_text(
-                    "Неизвестный стиль. Используй: balanced, conservative или risky."
+                    "Неизвестный стиль. Используй: balanced, conservative, risky или diversified."
                 )
             return
 
+        if style == "diversified":
+            if len(context.args) < 2:
+                if update.message:
+                    await update.message.reply_text(
+                        "Для diversified укажи размер серии.\n"
+                        "Пример: /bets diversified 6"
+                    )
+                return
+
+            try:
+                count = int(context.args[1])
+            except ValueError:
+                if update.message:
+                    await update.message.reply_text(
+                        "Размер серии должен быть целым числом.\n"
+                        "Пример: /bets diversified 6"
+                    )
+                return
+
+            if count < 2 or count > 20:
+                if update.message:
+                    await update.message.reply_text(
+                        "Для diversified размер серии должен быть от 2 до 20."
+                    )
+                return
+
     if update.message:
-        await update.message.reply_text(_format_bets_text(style))
+        await update.message.reply_text(_format_bets_text(style, count))
 
 
 async def add_handler(

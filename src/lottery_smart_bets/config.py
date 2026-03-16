@@ -3,6 +3,7 @@ from pathlib import Path
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 DATA_DIR = PROJECT_ROOT / "data"
 DATA_FILE = DATA_DIR / "winning_combinations.json"
+STATE_FILE = DATA_DIR / "app_state.json"
 
 MAIN_COUNT = 7
 MAIN_MIN = 1
