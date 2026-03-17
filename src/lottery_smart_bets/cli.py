@@ -4,6 +4,7 @@ from .analyzer import (
     never_seen_numbers,
     top_numbers_by_frequency,
 )
+from .backtest import format_backtest_report, run_backtest
 from .config import STYLE_NAMES
 from .generator import generate_bets
 from .parser import parse_combination
@@ -136,6 +137,22 @@ def _ask_diversified_count() -> int | None:
     return count
 
 
+def _ask_backtest_bets_per_draw() -> int | None:
+    text = input("Сколько ставок на каждый тестовый тираж? (1-20): ").strip()
+
+    try:
+        count = int(text)
+    except ValueError:
+        print("Нужно ввести целое число.")
+        return None
+
+    if count < 1 or count > 20:
+        print("Количество должно быть от 1 до 20.")
+        return None
+
+    return count
+
+
 def _generate(style: str, count: int) -> None:
     history = load_history()
     bets = generate_bets(history, count=count, style=style)
@@ -143,6 +160,28 @@ def _generate(style: str, count: int) -> None:
     print(f"\n{STYLE_NAMES[style]} стиль. Новые ставки:")
     for index, bet in enumerate(bets, start=1):
         print(f"{index}. {bet}")
+
+
+def _run_backtest_cli() -> None:
+    history = load_history()
+
+    if len(history) < 2:
+        print("Для ретеста нужно минимум 2 выигрышные комбинации.")
+        return
+
+    bets_per_draw = _ask_backtest_bets_per_draw()
+    if bets_per_draw is None:
+        return
+
+    results = run_backtest(
+        history,
+        strategies=["conservative", "balanced", "risky", "diversified"],
+        bets_per_draw=bets_per_draw,
+        seed=42,
+    )
+
+    print()
+    print(format_backtest_report(results))
 
 
 def _print_history() -> None:
@@ -165,6 +204,7 @@ def _print_menu() -> None:
     print("6 - Сгенерировать 2 рискованные ставки")
     print("7 - Сгенерировать серию диверсифицированных ставок")
     print("8 - Показать всю историю")
+    print("9 - Запустить ретест стратегий")
     print("0 - Выход")
 
 
@@ -194,6 +234,8 @@ def main() -> None:
                     _generate("diversified", diversified_count)
             elif choice == "8":
                 _print_history()
+            elif choice == "9":
+                _run_backtest_cli()
             elif choice == "0":
                 print("Выход.")
                 break
